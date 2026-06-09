@@ -7,7 +7,7 @@
 [![Japanese Typography](https://img.shields.io/badge/Japanese%20Typography-Noto%20Sans%20JP-111827)](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Open Standalone Web Promptor** は、ブラウザーだけで動く OSS 風のスタンドアロン Web テレプロンプターです。原稿はサーバーへ送信せず、ブラウザーの `localStorage` に複数保存できます。
+**Open Standalone Web Promptor** は、ブラウザーだけで動く スタンドアロン Web テレプロンプターです。原稿はサーバーへ送信せず、ブラウザーの `localStorage` に複数保存できます。
 
 ![App type](https://img.shields.io/badge/App-Client%20Only-10B981)
 ![Storage](https://img.shields.io/badge/Storage-localStorage-F59E0B)
