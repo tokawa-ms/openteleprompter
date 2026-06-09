@@ -1,0 +1,25 @@
+{
+  "name": "open-standalone-web-promptor",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test:e2e": "playwright test",
+    "swa:init": "swa init --yes",
+    "swa:start": "swa start",
+    "swa:deploy": "swa deploy --env production"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-jp": "^5.2.8"
+  },
+  "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.0.6",
+    "@playwright/test": "^1.60.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
