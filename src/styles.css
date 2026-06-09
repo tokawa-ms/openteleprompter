@@ -1,0 +1,398 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  background: #0d1117;
+  color: #f6f8fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgb(55 114 255 / 20%), transparent 32rem),
+    linear-gradient(135deg, #090c13 0%, #101827 45%, #111827 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(22rem, 0.95fr) minmax(18rem, 0.45fr) minmax(26rem, 1.25fr);
+  gap: 1rem;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.workspace,
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.brand,
+.editor-card,
+.control-card {
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 1.25rem;
+  background: rgb(13 17 23 / 78%);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 22%);
+  backdrop-filter: blur(16px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: #8ea2c6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(1.45rem, 2.4vw, 2.15rem);
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+.editor-card,
+.control-card {
+  padding: 1rem;
+}
+
+.editor-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.document-toolbar,
+.button-row {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field-grow {
+  flex: 1;
+}
+
+.editor-field {
+  flex: 1;
+  min-height: 24rem;
+}
+
+input,
+select,
+textarea,
+.rich-editor {
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 0.8rem;
+  outline: none;
+  background: rgb(2 6 23 / 72%);
+  color: #f6f8fa;
+}
+
+input,
+select {
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+}
+
+input[type='range'] {
+  min-height: auto;
+  padding: 0;
+  accent-color: #58a6ff;
+}
+
+.rich-editor,
+textarea {
+  flex: 1;
+  min-height: 100%;
+  padding: 1rem;
+  line-height: 1.8;
+}
+
+.rich-editor {
+  overflow: auto;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.rich-editor:empty::before {
+  color: #66758f;
+  content: 'ここに原稿を入力してください。';
+}
+
+.editor-format-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.format-button {
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+}
+
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #c9d1d9;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.color-field input {
+  width: 3rem;
+  min-height: 2.25rem;
+  padding: 0.2rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.rich-editor:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 0.2rem rgb(88 166 255 / 16%);
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button,
+.danger-button {
+  min-height: 2.75rem;
+  border-radius: 999px;
+  padding: 0 1rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.primary-button {
+  flex: 1;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.secondary-button,
+.ghost-button {
+  background: rgb(255 255 255 / 10%);
+}
+
+.danger-button {
+  background: rgb(248 81 73 / 18%);
+  color: #ffb4ad;
+}
+
+.controls {
+  min-width: 0;
+}
+
+.control-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.toggle input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+  accent-color: #58a6ff;
+}
+
+.hint-card p {
+  margin: 0;
+  color: #9fb0ce;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.promptor-stage {
+  position: relative;
+  overflow: auto;
+  height: calc(100vh - 2rem);
+  min-height: 30rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 1.4rem;
+  background: #000000;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%), 0 1.5rem 4rem rgb(0 0 0 / 28%);
+  scrollbar-width: thin;
+}
+
+.promptor-stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+}
+
+.promptor-stage:fullscreen .stage-controls {
+  display: grid;
+}
+
+.promptor-text {
+  min-height: 160vh;
+  padding: 42vh 7vw 56vh;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-break: strict;
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: pre-wrap;
+  hanging-punctuation: allow-end;
+}
+
+.promptor-paragraph {
+  margin: 0 0 1.15em;
+}
+
+.stage-controls {
+  position: fixed;
+  right: 50%;
+  bottom: 1.25rem;
+  z-index: 3;
+  display: none;
+  width: min(64rem, calc(100vw - 2rem));
+  padding: 0.9rem;
+  transform: translateX(50%);
+  gap: 0.85rem;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 1.2rem;
+  background: rgb(2 6 23 / 82%);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 45%);
+  backdrop-filter: blur(18px);
+}
+
+.stage-button-row,
+.stage-range-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.stage-button-row {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.stage-range-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stage-field {
+  display: grid;
+  gap: 0.35rem;
+  color: #dbeafe;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.promptor-fade {
+  position: sticky;
+  z-index: 1;
+  left: 0;
+  width: 100%;
+  height: 16vh;
+  pointer-events: none;
+}
+
+.promptor-fade.top {
+  top: 0;
+  margin-bottom: -16vh;
+  background: linear-gradient(#000000, transparent);
+}
+
+.promptor-fade.bottom {
+  bottom: 0;
+  margin-top: -16vh;
+  background: linear-gradient(transparent, #000000);
+}
+
+@media (max-width: 1180px) {
+  .shell {
+    grid-template-columns: minmax(20rem, 1fr) minmax(22rem, 1fr);
+  }
+
+  .promptor-stage {
+    grid-column: 1 / -1;
+    height: 68vh;
+    min-height: 26rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+    padding: 0.7rem;
+  }
+
+  .brand,
+  .document-toolbar,
+  .button-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editor-field {
+    min-height: 18rem;
+  }
+
+  .stage-button-row,
+  .stage-range-grid {
+    grid-template-columns: 1fr;
+  }
+}

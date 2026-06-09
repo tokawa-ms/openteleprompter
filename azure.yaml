@@ -1,0 +1,11 @@
+name: open-standalone-web-promptor
+metadata:
+  template: open-standalone-web-promptor@0.1.0
+services:
+  web:
+    project: .
+    language: js
+    host: staticwebapp
+    dist: dist
+infra:
+  provider: bicep
