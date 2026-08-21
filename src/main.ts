@@ -430,11 +430,15 @@ const renderPromptText = () => {
   const paragraphElements: HTMLElement[] = [];
   let currentLine: Node[] = [];
   let currentParagraphLines: Node[][] = [];
+  let pendingRewindPoints: Node[] = [];
 
   const lineHasContent = (line: Node[]) => {
     const probe = document.createElement('div');
     probe.append(...line.map((node) => node.cloneNode(true)));
-    return Boolean(probe.textContent?.trim() || probe.querySelector('b, strong, i, em, u, span:not([data-rewind-point])'));
+    return Boolean(
+      probe.textContent?.trim() ||
+        probe.querySelector('b, strong, i, em, u, span:not([data-rewind-point]):not(.promptor-rewind-point)'),
+    );
   };
 
   const pushParagraph = () => {
@@ -456,8 +460,15 @@ const renderPromptText = () => {
 
   const pushLine = () => {
     if (lineHasContent(currentLine)) {
-      currentParagraphLines.push(currentLine);
+      currentParagraphLines.push([...pendingRewindPoints, ...currentLine]);
+      pendingRewindPoints = [];
+    } else if (currentLine.some((node) => node instanceof HTMLElement && node.classList.contains('promptor-rewind-point'))) {
+      pendingRewindPoints.push(...currentLine);
     } else {
+      if (pendingRewindPoints.length > 0 && currentParagraphLines.length > 0) {
+        currentParagraphLines[currentParagraphLines.length - 1].push(...pendingRewindPoints);
+        pendingRewindPoints = [];
+      }
       pushParagraph();
     }
     currentLine = [];
@@ -497,6 +508,10 @@ const renderPromptText = () => {
   }
 
   pushLine();
+  if (pendingRewindPoints.length > 0 && currentParagraphLines.length > 0) {
+    currentParagraphLines[currentParagraphLines.length - 1].push(...pendingRewindPoints);
+    pendingRewindPoints = [];
+  }
   pushParagraph();
 
   promptorText.replaceChildren(...paragraphElements);
