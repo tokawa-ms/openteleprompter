@@ -1,56 +1,115 @@
 # アーキテクチャ
 
-## 構成
+## システム構成
 
-Open Standalone Web Promptor は Vite + TypeScript の静的 Web アプリです。バックエンド API は持たず、Azure Static Web Apps へ静的ファイルとしてデプロイできます。
+Open Standalone Web Promptor は Vite + TypeScript で構築した静的 Web アプリです。バックエンド API、データベース、サーバーサイドレンダリングは使用しません。
 
 ```text
-Browser
-  ├─ UI rendering
-  ├─ Teleprompter playback
-  ├─ Rich text editing
-  └─ localStorage persistence
-
-Azure Static Web Apps
-  └─ Static hosting for dist/
+Source
+  └─ TypeScript + CSS + bundled fonts
+          │
+          ▼
+     Vite build
+          │
+          ▼
+        dist/
+          │
+          ├─ GitHub Pages
+          ├─ Azure Static Web Apps
+          └─ Local preview
+                 │
+                 ▼
+              Browser
+                 ├─ UI and rich-text editing
+                 ├─ Teleprompter playback
+                 ├─ Fullscreen controls
+                 └─ localStorage persistence
 ```
+
+ホスティング先は静的ファイルを配信するだけです。アプリケーション状態と原稿データはブラウザー内に残ります。
 
 ## 主要ファイル
 
 | ファイル | 役割 |
 | --- | --- |
-| `src/main.ts` | UI 生成、状態管理、保存、再生制御、リッチテキスト処理 |
-| `src/styles.css` | レイアウト、全画面コントロール、日本語組版、リッチエディター |
-| `public/staticwebapp.config.json` | Azure Static Web Apps のルーティング/ヘッダー設定 |
-| `infra/main.bicep` | Azure Static Web App リソース定義 |
-| `tests/playback.spec.ts` | Playwright E2E テスト |
+| `index.html` | Vite の HTML エントリーポイント |
+| `src/main.ts` | UI 生成、状態管理、保存、サニタイズ、再生、巻き戻し制御 |
+| `src/styles.css` | レイアウト、書式、全画面 UI、日本語組版 |
+| `tests/playback.spec.ts` | 主要ユーザーフローの Playwright E2E テスト |
+| `.github/workflows/deploy-pages.yml` | GitHub Pages のビルドとデプロイ |
+| `public/staticwebapp.config.json` | Azure Static Web Apps のフォールバックとヘッダー |
+| `azure.yaml` | Azure Developer CLI のサービス定義 |
+| `infra/main.bicep` | Azure Static Web App のリソース定義 |
 
-## 状態管理
+## 状態モデル
 
-外部状態管理ライブラリは使っていません。`src/main.ts` 内の次の状態を DOM と同期します。
+外部の状態管理ライブラリは使用せず、`src/main.ts` のモジュールスコープで状態を保持します。
 
-- `documents`: 保存済み原稿一覧
-- `settings`: 表示設定
-- `activeDocument`: 現在編集中の原稿
-- `isPlaying`: 再生中かどうか
-- `promptScrollTop`: 小数を含むスクロール位置
+| 状態 | 内容 |
+| --- | --- |
+| `documents` | 保存済み原稿の配列 |
+| `settings` | 選択中の原稿 ID と表示設定 |
+| `activeDocument` | 現在編集中の原稿 |
+| `isPlaying` | 自動スクロールの実行状態 |
+| `promptScrollTop` | 小数を含む論理スクロール位置 |
+| `savedEditorRange` | 書式操作に使用する本文の選択範囲 |
 
-## 保存キー
+原稿は `id`、`title`、`body`、`updatedAt` を持ちます。`body` はサニタイズ済み HTML です。
 
-| キー | 内容 |
+## 永続化
+
+| `localStorage` キー | 内容 |
 | --- | --- |
 | `open-standalone-web-promptor.documents.v1` | 原稿一覧 |
-| `open-standalone-web-promptor.settings.v1` | 表示設定 |
+| `open-standalone-web-promptor.settings.v1` | 表示設定と選択中の原稿 ID |
 
-## リッチテキストの安全性
+JSON の解析に失敗した場合は該当データを初期値へ戻します。保存領域はオリジン単位なので、ローカル環境、GitHub Pages、Azure Static Web Apps の間では共有されません。
 
-本文は HTML として保存しますが、保存前に次のように制限します。
+## リッチテキスト処理
 
-- 許可タグ: `b`, `strong`, `i`, `em`, `u`, `span`, `div`, `p`, `br`
-- `span` と `font` 由来の色だけを許可
-- その他のタグ、属性、イベントハンドラーは破棄
+本文は `contenteditable` で編集し、保存前と表示前にサニタイズします。
+
+許可する要素:
+
+- 改行とブロック: `br`, `div`, `p`
+- 書式: `b`, `strong`, `i`, `em`, `u`, `span`
+- 互換入力: `font` は色だけを取り出して `span` へ変換
+- 制御タグ: `<span data-rewind-point="true">`
+
+許可する属性:
+
+- 通常の `span` は妥当な `style.color` だけを保持
+- 制御タグは `data-rewind-point="true"` と `contenteditable="false"` を再生成
+
+その他の要素、属性、イベントハンドラーは破棄し、子の安全な内容だけを残します。
+
+書式ボタンを押すと保存した選択範囲を編集欄へ復元し、ブラウザーの編集コマンドで太字、斜体、下線をトグルします。操作後はサニタイズ、永続化、プレビュー更新を連続して行います。
 
 ## テレプロンプター表示変換
 
-編集欄では Chrome が Enter 入力時に `<div>` を生成することがあります。表示変換では通常テキスト、`<br>`、`<div>`、`<p>` が混在しても、順序を保って `.promptor-paragraph` に変換します。
+保存した HTML は次の手順で表示用 DOM へ変換します。
 
+1. 本文を再度サニタイズします。
+2. `br` とブラウザーが生成する `div`／`p` を行として解析します。
+3. 空行で段落を確定し、`.promptor-paragraph` を生成します。
+4. 制御タグで段落を区切り、不可視の `.promptor-rewind-point` を生成します。
+5. 書式要素を保持したまま `.promptor-text` へ配置します。
+
+この変換により、空行を使う原稿と制御タグだけを使う原稿の両方で巻き戻し位置を定義できます。
+
+## 再生と巻き戻し
+
+再生ループは `requestAnimationFrame` の経過時間と速度設定から次のスクロール位置を計算します。DOM の整数スクロール位置とは別に小数値を保持するため、低速でも移動が失われません。
+
+- 一行巻き戻し: `文字サイズ × 行間` を現在位置から引きます。
+- 一段落巻き戻し: `.promptor-paragraph` と `.promptor-rewind-point` の位置を列挙し、直前の対象を画面上端から 1/3 の目線位置へ合わせます。
+- 目線ガイド: 全画面時だけ `33.333vh` の位置へ固定表示します。
+
+## ホスティング差異
+
+| 項目 | GitHub Pages | Azure Static Web Apps |
+| --- | --- | --- |
+| ビルド | `npm run build:pages` | `npm run build` |
+| ベースパス | `/openteleprompter/` | `/` |
+| ランタイム設定 | GitHub Pages workflow | `staticwebapp.config.json` |
+| アプリ本体 | 同じ `dist` 形式 | 同じ `dist` 形式 |
