@@ -1,5 +1,7 @@
 # 🎙️ Open Standalone Web Promptor
 
+**[GitHub Pages でアプリを開く](https://tokawa-ms.github.io/openteleprompter/)**
+
 [![Azure Static Web Apps](https://img.shields.io/badge/Azure-Static%20Web%20Apps-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/app-service/static)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -72,7 +74,7 @@ azd up
 公開 URL:
 
 ```text
-https://tokawa-ms.github.io/openteleprompter/
+https://<your-github-account>.github.io/openteleprompter/
 ```
 
 Pages 用の成果物をローカルで作成する場合:
