@@ -259,6 +259,41 @@ test('rewind point control tag preserves text flow and stays hidden in the promp
   expect(savedBody).toContain('data-rewind-point="true"');
 });
 
+test('rewind point between editor div lines does not create a blank prompt line', async ({ page }) => {
+  await page.goto('/');
+
+  const promptorText = page.locator('#promptorText');
+  await page.locator('#bodyInput').evaluate((element) => {
+    element.innerHTML =
+      '<div>創業30周年、</div>' +
+      '<span data-rewind-point="true" contenteditable="false">↩ 巻き戻しポイント</span>' +
+      '<div>誠におめでとうございます。</div>';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await expect(promptorText.locator('.promptor-paragraph')).toHaveCount(1);
+  await expect(promptorText.locator('.promptor-rewind-point')).toHaveCount(1);
+  await expect(promptorText).toHaveText('創業30周年、誠におめでとうございます。');
+
+  const heightWithMarker = await promptorText.evaluate((element) => {
+    const paragraph = element.querySelector('.promptor-paragraph');
+    if (!paragraph) {
+      throw new Error('Prompt paragraph was not rendered.');
+    }
+    return paragraph.getBoundingClientRect().height;
+  });
+
+  await page.locator('#bodyInput').evaluate((element) => {
+    element.querySelector('[data-rewind-point="true"]')?.remove();
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const heightWithoutMarker = await promptorText.locator('.promptor-paragraph').evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+
+  expect(heightWithMarker).toBe(heightWithoutMarker);
+});
+
 test('paragraph rewind stops at the previous control point instead of the beginning', async ({ page }) => {
   await page.goto('/');
 
