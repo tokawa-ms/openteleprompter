@@ -464,12 +464,10 @@ const renderPromptText = () => {
   };
 
   const pushRewindPoint = () => {
-    pushLine();
-    pushParagraph();
-    const rewindPoint = document.createElement('div');
+    const rewindPoint = document.createElement('span');
     rewindPoint.className = 'promptor-rewind-point';
     rewindPoint.setAttribute('aria-hidden', 'true');
-    paragraphElements.push(rewindPoint);
+    currentLine.push(rewindPoint);
   };
 
   const appendInlineNodes = (nodes: Node[]) => {
@@ -606,7 +604,10 @@ const rewindOneParagraph = () => {
       currentTargetIndex = index;
     }
   }
-  const targetIndex = Math.max(0, currentTargetIndex - 1);
+  const currentTarget = rewindTargets[currentTargetIndex];
+  const targetIndex = currentTarget.classList.contains('promptor-rewind-point')
+    ? currentTargetIndex
+    : Math.max(0, currentTargetIndex - 1);
   const targetTop =
     rewindTargetTops[targetIndex] - promptorStage.clientHeight * READING_GUIDE_POSITION;
   setPromptScrollTop(targetTop);
