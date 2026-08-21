@@ -1,4 +1,26 @@
-# Azure デプロイ
+# デプロイ
+
+## GitHub Pages
+
+`.github/workflows/deploy-pages.yml` が `main` ブランチへの push を検知し、GitHub Pages 用のビルドとデプロイを実行します。
+
+初回のみ、GitHub リポジトリの **Settings → Pages → Build and deployment → Source** で **GitHub Actions** を選択してください。
+
+公開 URL:
+
+```text
+https://tokawa-ms.github.io/openteleprompter/
+```
+
+ローカルで Pages 用の成果物を生成するには、次を実行します。
+
+```powershell
+npm run build:pages
+```
+
+このコマンドは Vite のベースパスを `/openteleprompter/` に設定して `dist/` を生成します。
+
+## Azure Static Web Apps
 
 このプロジェクトは Azure Static Web Apps へデプロイできます。Azure Developer CLI (`azd`) と Bicep テンプレートを同梱しています。
 
@@ -42,4 +64,3 @@ npm run swa:start
 - `navigationFallback`: SPA として `index.html` へフォールバック
 - `globalHeaders`: 基本的なセキュリティヘッダー
 - `mimeTypes`: Web manifest 用 MIME 設定
-

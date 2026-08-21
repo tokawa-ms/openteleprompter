@@ -11,7 +11,7 @@
 
 ![App type](https://img.shields.io/badge/App-Client%20Only-10B981)
 ![Storage](https://img.shields.io/badge/Storage-localStorage-F59E0B)
-![Deploy](https://img.shields.io/badge/Deploy-azd%20%2B%20SWA-2563EB)
+![Deploy](https://img.shields.io/badge/Deploy-GitHub%20Pages%20%2F%20Azure-2563EB)
 
 ## ✨ Features
 
@@ -24,6 +24,7 @@
 - 🇯🇵 Noto Sans JP 同梱、日本語禁則処理対応
 - 🪞 左右反転、行揃え、全画面表示
 - ☁️ Azure Static Web Apps と Azure Developer CLI (`azd`) に対応
+- 📄 GitHub Actions による GitHub Pages への自動デプロイ
 - 🧪 Playwright による主要操作の E2E テスト
 
 ## 🚀 Quick start
@@ -59,6 +60,24 @@ azd up
 ```
 
 `azd up` は `infra/main.bicep` で Azure Static Web App を作成し、`dist` のビルド成果物をデプロイします。
+
+## 📄 GitHub Pages
+
+`main` ブランチへ push すると、GitHub Actions がアプリをビルドして GitHub Pages へデプロイします。
+
+初回のみ、リポジトリの **Settings → Pages → Build and deployment → Source** で **GitHub Actions** を選択してください。
+
+公開 URL:
+
+```text
+https://tokawa-ms.github.io/openteleprompter/
+```
+
+Pages 用の成果物をローカルで作成する場合:
+
+```powershell
+npm run build:pages
+```
 
 ## 📚 Documentation
 
