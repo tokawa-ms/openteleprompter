@@ -1,6 +1,7 @@
 import '@fontsource/noto-sans-jp/400.css';
 import '@fontsource/noto-sans-jp/500.css';
 import '@fontsource/noto-sans-jp/700.css';
+import '@fontsource/noto-sans-jp/900.css';
 import './styles.css';
 
 type Alignment = 'left' | 'center' | 'right';
@@ -21,6 +22,7 @@ type Settings = {
   mirror: boolean;
 };
 
+const READING_GUIDE_POSITION = 1 / 3;
 const DOCUMENTS_KEY = 'open-standalone-web-promptor.documents.v1';
 const SETTINGS_KEY = 'open-standalone-web-promptor.settings.v1';
 
@@ -120,6 +122,7 @@ app.innerHTML = `
             <button class="secondary-button format-button" id="boldButton" type="button">太字</button>
             <button class="secondary-button format-button" id="italicButton" type="button">斜体</button>
             <button class="secondary-button format-button" id="underlineButton" type="button">下線</button>
+            <button class="secondary-button format-button" id="rewindPointButton" type="button">巻き戻しポイント</button>
             <label class="color-field">
               <span>色</span>
               <input id="textColorInput" type="color" value="#ffffff" />
@@ -183,6 +186,7 @@ app.innerHTML = `
 
     <section class="promptor-stage" id="promptorStage" aria-label="テレプロンプター表示">
       <div class="promptor-fade top"></div>
+      <div class="reading-guide" id="readingGuide" aria-hidden="true"></div>
       <article class="promptor-text" id="promptorText"></article>
       <div class="promptor-fade bottom"></div>
       <div class="stage-controls" aria-label="全画面再生コントロール">
@@ -226,6 +230,7 @@ const promptorText = getElement<HTMLElement>('promptorText');
 const boldButton = getElement<HTMLButtonElement>('boldButton');
 const italicButton = getElement<HTMLButtonElement>('italicButton');
 const underlineButton = getElement<HTMLButtonElement>('underlineButton');
+const rewindPointButton = getElement<HTMLButtonElement>('rewindPointButton');
 const textColorInput = getElement<HTMLInputElement>('textColorInput');
 const playButton = getElement<HTMLButtonElement>('playButton');
 const stagePlayButton = getElement<HTMLButtonElement>('stagePlayButton');
@@ -293,6 +298,14 @@ const sanitizeHtml = (value: string) => {
 
     if (tagName === 'br') {
       return document.createElement('br');
+    }
+
+    if (tagName === 'span' && sourceElement.dataset.rewindPoint === 'true') {
+      const rewindPoint = document.createElement('span');
+      rewindPoint.dataset.rewindPoint = 'true';
+      rewindPoint.contentEditable = 'false';
+      rewindPoint.textContent = '↩ 巻き戻しポイント';
+      return rewindPoint;
     }
 
     const formattingTags = new Set(['b', 'strong', 'i', 'em', 'u', 'span', 'div', 'p']);
@@ -371,37 +384,78 @@ const renderPromptText = () => {
   const template = document.createElement('template');
   template.innerHTML = getDocumentBodyHtml();
   const paragraphElements: HTMLElement[] = [];
-  let currentParagraph = document.createElement('div');
-  currentParagraph.className = 'promptor-paragraph';
+  let currentLine: Node[] = [];
+  let currentParagraphLines: Node[][] = [];
 
-  const hasVisibleContent = (element: HTMLElement) =>
-    element.textContent?.trim() || element.querySelector('br, b, strong, i, em, u, span');
+  const lineHasContent = (line: Node[]) => {
+    const probe = document.createElement('div');
+    probe.append(...line.map((node) => node.cloneNode(true)));
+    return Boolean(probe.textContent?.trim() || probe.querySelector('b, strong, i, em, u, span:not([data-rewind-point])'));
+  };
 
-  const pushCurrentParagraph = () => {
-    if (hasVisibleContent(currentParagraph)) {
-      paragraphElements.push(currentParagraph);
+  const pushParagraph = () => {
+    if (currentParagraphLines.length === 0) {
+      return;
     }
-    currentParagraph = document.createElement('div');
-    currentParagraph.className = 'promptor-paragraph';
+
+    const paragraph = document.createElement('div');
+    paragraph.className = 'promptor-paragraph';
+    currentParagraphLines.forEach((line, index) => {
+      if (index > 0) {
+        paragraph.append(document.createElement('br'));
+      }
+      paragraph.append(...line);
+    });
+    paragraphElements.push(paragraph);
+    currentParagraphLines = [];
+  };
+
+  const pushLine = () => {
+    if (lineHasContent(currentLine)) {
+      currentParagraphLines.push(currentLine);
+    } else {
+      pushParagraph();
+    }
+    currentLine = [];
+  };
+
+  const pushRewindPoint = () => {
+    pushLine();
+    pushParagraph();
+    const rewindPoint = document.createElement('div');
+    rewindPoint.className = 'promptor-rewind-point';
+    rewindPoint.setAttribute('aria-hidden', 'true');
+    paragraphElements.push(rewindPoint);
+  };
+
+  const appendInlineNodes = (nodes: Node[]) => {
+    for (const node of nodes) {
+      if (node instanceof HTMLElement && node.dataset.rewindPoint === 'true') {
+        pushRewindPoint();
+      } else if (node instanceof HTMLBRElement) {
+        pushLine();
+      } else {
+        currentLine.push(node.cloneNode(true));
+      }
+    }
   };
 
   for (const node of template.content.childNodes) {
-    if (node instanceof HTMLElement && ['DIV', 'P'].includes(node.tagName)) {
-      pushCurrentParagraph();
-
-      const paragraphElement = document.createElement('div');
-      paragraphElement.className = 'promptor-paragraph';
-      paragraphElement.append(...[...node.childNodes].map((child) => child.cloneNode(true)));
-      if (hasVisibleContent(paragraphElement)) {
-        paragraphElements.push(paragraphElement);
+    if (node instanceof HTMLElement && node.dataset.rewindPoint === 'true') {
+      pushRewindPoint();
+    } else if (node instanceof HTMLElement && ['DIV', 'P'].includes(node.tagName)) {
+      if (currentLine.length > 0) {
+        pushLine();
       }
-      continue;
+      appendInlineNodes([...node.childNodes]);
+      pushLine();
+    } else {
+      appendInlineNodes([node]);
     }
-
-    currentParagraph.append(node.cloneNode(true));
   }
 
-  pushCurrentParagraph();
+  pushLine();
+  pushParagraph();
 
   promptorText.replaceChildren(...paragraphElements);
   promptorText.style.fontSize = `${settings.fontSize}px`;
@@ -491,22 +545,25 @@ const rewindOneLine = () => {
 };
 
 const rewindOneParagraph = () => {
-  const paragraphs = [...promptorText.querySelectorAll<HTMLElement>('.promptor-paragraph')];
-  if (paragraphs.length === 0) {
+  const rewindTargets = [
+    ...promptorText.querySelectorAll<HTMLElement>('.promptor-paragraph, .promptor-rewind-point'),
+  ];
+  if (rewindTargets.length === 0) {
     rewindOneLine();
     return;
   }
 
-  const readingLineTop = promptorStage.scrollTop + promptorStage.clientHeight * 0.42;
-  const paragraphTops = paragraphs.map(getElementTopInStage);
-  let currentParagraphIndex = 0;
-  for (const [index, top] of paragraphTops.entries()) {
+  const readingLineTop = promptorStage.scrollTop + promptorStage.clientHeight * READING_GUIDE_POSITION;
+  const rewindTargetTops = rewindTargets.map(getElementTopInStage);
+  let currentTargetIndex = 0;
+  for (const [index, top] of rewindTargetTops.entries()) {
     if (top < readingLineTop - getLineScrollAmount()) {
-      currentParagraphIndex = index;
+      currentTargetIndex = index;
     }
   }
-  const targetParagraphIndex = Math.max(0, currentParagraphIndex - 1);
-  const targetTop = paragraphTops[targetParagraphIndex] - promptorStage.clientHeight * 0.42;
+  const targetIndex = Math.max(0, currentTargetIndex - 1);
+  const targetTop =
+    rewindTargetTops[targetIndex] - promptorStage.clientHeight * READING_GUIDE_POSITION;
   setPromptScrollTop(targetTop);
   lastAnimationFrame = 0;
 };
@@ -569,14 +626,13 @@ const saveEditorSelection = () => {
 };
 
 const restoreEditorSelection = () => {
+  bodyInput.focus({ preventScroll: true });
   if (!savedEditorRange) {
-    bodyInput.focus();
     return;
   }
 
   const selection = document.getSelection();
   if (!selection) {
-    bodyInput.focus();
     return;
   }
 
@@ -601,21 +657,55 @@ const applyEditorCommand = (command: 'bold' | 'italic' | 'underline' | 'foreColo
     return;
   }
 
-  const wrapperTag = command === 'bold' ? 'b' : command === 'italic' ? 'i' : command === 'underline' ? 'u' : 'span';
-  const wrapper = document.createElement(wrapperTag);
+  let commandValue: string | undefined;
   if (command === 'foreColor') {
-    const sanitizedColor = sanitizeColor(value ?? '');
-    if (!sanitizedColor) {
+    commandValue = sanitizeColor(value ?? '');
+    if (!commandValue) {
       return;
     }
-    wrapper.style.color = sanitizedColor;
   }
 
-  wrapper.append(range.extractContents());
-  range.insertNode(wrapper);
+  const commandApplied = document.execCommand(command, false, commandValue);
+  if (!commandApplied) {
+    console.error(`Editor command "${command}" could not be applied.`);
+    return;
+  }
+
+  bodyInput.focus();
+  saveEditorBody();
+};
+
+const insertRewindPoint = () => {
+  restoreEditorSelection();
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  if (!bodyInput.contains(range.commonAncestorContainer)) {
+    return;
+  }
+
+  range.collapse(false);
+  let topLevelNode = range.endContainer;
+  while (topLevelNode.parentNode && topLevelNode.parentNode !== bodyInput) {
+    topLevelNode = topLevelNode.parentNode;
+  }
+  if (topLevelNode !== range.endContainer && topLevelNode.parentNode === bodyInput) {
+    range.setStartAfter(topLevelNode);
+    range.collapse(true);
+  }
+
+  const rewindPoint = document.createElement('span');
+  rewindPoint.dataset.rewindPoint = 'true';
+  rewindPoint.contentEditable = 'false';
+  rewindPoint.textContent = '↩ 巻き戻しポイント';
+  range.insertNode(rewindPoint);
 
   const nextRange = document.createRange();
-  nextRange.selectNodeContents(wrapper);
+  nextRange.setStartAfter(rewindPoint);
+  nextRange.collapse(true);
   selection.removeAllRanges();
   selection.addRange(nextRange);
   savedEditorRange = nextRange.cloneRange();
@@ -644,11 +734,15 @@ italicButton.addEventListener('mousedown', (event) => event.preventDefault());
 
 underlineButton.addEventListener('mousedown', (event) => event.preventDefault());
 
+rewindPointButton.addEventListener('mousedown', (event) => event.preventDefault());
+
 boldButton.addEventListener('click', () => applyEditorCommand('bold'));
 
 italicButton.addEventListener('click', () => applyEditorCommand('italic'));
 
 underlineButton.addEventListener('click', () => applyEditorCommand('underline'));
+
+rewindPointButton.addEventListener('click', insertRewindPoint);
 
 textColorInput.addEventListener('input', () => applyEditorCommand('foreColor', textColorInput.value));
 

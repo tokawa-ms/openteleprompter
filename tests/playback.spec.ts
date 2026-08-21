@@ -16,7 +16,9 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
 
   const stage = page.locator('#promptorStage');
   const stagePlayButton = page.locator('#stagePlayButton');
+  const readingGuide = page.locator('#readingGuide');
   await expect(stage).toBeVisible();
+  await expect(readingGuide).toBeHidden();
 
   const before = await stage.evaluate((element) => ({
     scrollTop: element.scrollTop,
@@ -42,6 +44,11 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
   await expect(page.locator('#stageFontSizeInput')).toBeVisible();
   await expect(page.locator('#stageSpeedInput')).toBeVisible();
   await expect(page.locator('#stageLineHeightInput')).toBeVisible();
+  await expect(readingGuide).toBeVisible();
+  const readingGuidePosition = await readingGuide.evaluate(
+    (element) => element.getBoundingClientRect().top / window.innerHeight,
+  );
+  expect(readingGuidePosition).toBeCloseTo(1 / 3, 2);
 
   await expect
     .poll(async () => stage.evaluate((element) => element.scrollTop), {
@@ -116,19 +123,24 @@ test('editor applies rich text formatting to teleprompter text', async ({ page }
   await page.goto('/');
 
   const editor = page.locator('#bodyInput');
+  const promptorText = page.locator('#promptorText');
   await editor.fill('書式テスト');
   await editor.focus();
   await page.keyboard.press('Control+A');
 
   await page.locator('#boldButton').click();
+  await expect(promptorText.locator('b')).toHaveCSS('font-weight', '900');
+
   await page.locator('#italicButton').click();
+  await expect(promptorText.locator('i')).toHaveCSS('font-style', 'italic');
+
   await page.locator('#underlineButton').click();
   await setRangeValue(page.locator('#textColorInput'), '#ffcc00');
 
-  await expect(page.locator('#promptorText b')).toHaveText('書式テスト');
-  await expect(page.locator('#promptorText i')).toHaveText('書式テスト');
-  await expect(page.locator('#promptorText u')).toHaveText('書式テスト');
-  await expect(page.locator('#promptorText span')).toHaveCSS('color', 'rgb(255, 204, 0)');
+  await expect(promptorText.locator('b')).toHaveText('書式テスト');
+  await expect(promptorText.locator('i')).toHaveText('書式テスト');
+  await expect(promptorText.locator('u')).toHaveCSS('text-decoration-line', 'underline');
+  await expect(promptorText.locator('span')).toHaveCSS('color', 'rgb(255, 204, 0)');
 
   const savedBody = await page.evaluate(() => {
     const documents = JSON.parse(localStorage.getItem('open-standalone-web-promptor.documents.v1') ?? '[]') as Array<{
@@ -141,6 +153,113 @@ test('editor applies rich text formatting to teleprompter text', async ({ page }
   expect(savedBody).toContain('<i>');
   expect(savedBody).toContain('<u>');
   expect(savedBody).toContain('color: rgb(255, 204, 0)');
+});
+
+test('editor toggles formatting off for the selected text', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  await editor.fill('トグルテスト');
+
+  for (const [buttonId, tagName] of [
+    ['boldButton', 'b'],
+    ['italicButton', 'i'],
+    ['underlineButton', 'u'],
+  ] as const) {
+    await editor.focus();
+    await page.keyboard.press('Control+A');
+    await page.locator(`#${buttonId}`).click();
+    await expect(editor.locator(tagName)).toHaveText('トグルテスト');
+
+    await page.locator(`#${buttonId}`).click();
+    await expect(editor.locator(tagName)).toHaveCount(0);
+    await expect(editor).toHaveText('トグルテスト');
+  }
+});
+
+test('rewind point control tag splits paragraphs without appearing in the prompt', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  await editor.fill('前半後半');
+  await editor.evaluate((element) => {
+    const text = element.firstChild;
+    if (!text) {
+      throw new Error('Editor text node was not found.');
+    }
+
+    const range = document.createRange();
+    range.setStart(text, 2);
+    range.collapse(true);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    element.dispatchEvent(new Event('mouseup', { bubbles: true }));
+  });
+
+  await page.locator('#rewindPointButton').click();
+
+  await expect(editor.locator('[data-rewind-point="true"]')).toHaveText('↩ 巻き戻しポイント');
+  await expect(page.locator('#promptorText .promptor-paragraph')).toHaveCount(2);
+  await expect(page.locator('#promptorText .promptor-rewind-point')).toHaveCount(1);
+  await expect(page.locator('#promptorText')).toHaveText('前半後半');
+  await expect(page.locator('#promptorText')).not.toContainText('巻き戻しポイント');
+
+  const savedBody = await page.evaluate(() => {
+    const documents = JSON.parse(localStorage.getItem('open-standalone-web-promptor.documents.v1') ?? '[]') as Array<{
+      body: string;
+    }>;
+    return documents[0]?.body ?? '';
+  });
+  expect(savedBody).toContain('data-rewind-point="true"');
+});
+
+test('paragraph rewind stops at the previous control point instead of the beginning', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  await editor.evaluate((element) => {
+    const firstSection = Array.from({ length: 12 }, (_, index) => `前半 ${index + 1}`).join('<br>');
+    const secondSection = Array.from({ length: 12 }, (_, index) => `後半 ${index + 1}`).join('<br>');
+    element.innerHTML =
+      `${firstSection}<span data-rewind-point="true" contenteditable="false">` +
+      `↩ 巻き戻しポイント</span>${secondSection}`;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await page.locator('#playButton').click();
+  await expect
+    .poll(async () => page.evaluate(() => document.fullscreenElement?.id ?? null))
+    .toBe('promptorStage');
+  await page.locator('#stagePlayButton').click();
+
+  const stage = page.locator('#promptorStage');
+  const positions = await stage.evaluate((element) => {
+    const prompt = element.querySelector('#promptorText');
+    const rewindPoint = prompt?.querySelector('.promptor-rewind-point');
+    const paragraphs = prompt?.querySelectorAll('.promptor-paragraph');
+    if (!rewindPoint || !paragraphs || paragraphs.length < 2) {
+      throw new Error('Expected rewind targets were not rendered.');
+    }
+
+    const stageTop = element.getBoundingClientRect().top;
+    const getTop = (target: Element) =>
+      target.getBoundingClientRect().top - stageTop + element.scrollTop;
+    const lineHeight = Number.parseFloat(getComputedStyle(paragraphs[1]).lineHeight);
+    const readingOffset = element.clientHeight / 3;
+    const initial = getTop(paragraphs[1]) - readingOffset + lineHeight * 2;
+    const expected = Math.max(0, getTop(rewindPoint) - readingOffset);
+    element.scrollTop = initial;
+    element.dispatchEvent(new Event('scroll', { bubbles: true }));
+    return { expected, initial };
+  });
+
+  await page.locator('#rewindParagraphButton').click();
+  const actual = await stage.evaluate((element) => element.scrollTop);
+
+  expect(actual).toBeLessThan(positions.initial);
+  expect(actual).toBeGreaterThan(0);
+  expect(actual).toBeCloseTo(positions.expected, 0);
 });
 
 test('editor keeps existing text when appending a new line', async ({ page }) => {
