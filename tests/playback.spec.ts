@@ -11,6 +11,34 @@ const setRangeValue = async (locator: Locator, value: string) => {
   );
 };
 
+const readDurationSeconds = async (locator: Locator) => {
+  const value = (await locator.textContent())?.trim() ?? '';
+  const match = /^(\d+)分(\d{2})秒$/.exec(value);
+  if (!match) {
+    throw new Error(`Unexpected duration: ${value}`);
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+test('estimated duration updates with speed and appears in fullscreen controls', async ({ page }) => {
+  await page.goto('/');
+
+  const durationOutput = page.locator('#durationOutput');
+  const stageDurationOutput = page.locator('#stageDurationOutput');
+  await expect(durationOutput).toHaveText(/^\d+分\d{2}秒$/);
+  const initialDuration = await readDurationSeconds(durationOutput);
+  expect(initialDuration).toBeGreaterThan(0);
+
+  await setRangeValue(page.locator('#speedInput'), '92');
+  await expect
+    .poll(() => readDurationSeconds(durationOutput))
+    .toBeLessThan(initialDuration);
+
+  await page.locator('#playButton').click();
+  await expect(stageDurationOutput).toBeVisible();
+  await expect(stageDurationOutput).toHaveText((await durationOutput.textContent()) ?? '');
+});
+
 test('play button scrolls the teleprompter stage', async ({ page }) => {
   await page.goto('/');
 

@@ -148,6 +148,11 @@ app.innerHTML = `
           <button class="primary-button" id="playButton" type="button">再生</button>
           <button class="secondary-button" id="resetButton" type="button">先頭へ</button>
         </div>
+        <div class="duration-summary">
+          <span>想定再生時間</span>
+          <output id="durationOutput" aria-live="polite">0分00秒</output>
+          <small>現在の原稿・文字サイズ・行間・速度から算出</small>
+        </div>
       </section>
 
       <section class="control-card">
@@ -209,6 +214,10 @@ app.innerHTML = `
             <input id="stageLineHeightInput" type="range" min="1.1" max="2.2" step="0.05" />
           </label>
         </div>
+        <div class="stage-duration-summary">
+          <span>想定再生時間</span>
+          <output id="stageDurationOutput" aria-live="polite">0分00秒</output>
+        </div>
       </div>
     </section>
   </main>
@@ -254,12 +263,15 @@ const speedOutput = getElement<HTMLOutputElement>('speedOutput');
 const stageSpeedOutput = getElement<HTMLOutputElement>('stageSpeedOutput');
 const lineHeightOutput = getElement<HTMLOutputElement>('lineHeightOutput');
 const stageLineHeightOutput = getElement<HTMLOutputElement>('stageLineHeightOutput');
+const durationOutput = getElement<HTMLOutputElement>('durationOutput');
+const stageDurationOutput = getElement<HTMLOutputElement>('stageDurationOutput');
 
 let activeDocument = documents.find((document) => document.id === settings.activeId) ?? documents[0];
 let isPlaying = false;
 let lastAnimationFrame = 0;
 let promptScrollTop = 0;
 let savedEditorRange: Range | null = null;
+let durationRenderFrame: number | null = null;
 
 const containsHtml = (value: string) => /<\/?[a-z][\s\S]*>/i.test(value);
 
@@ -356,6 +368,38 @@ const getMaxPromptScrollTop = () => Math.max(0, promptorStage.scrollHeight - pro
 const setPromptScrollTop = (top: number) => {
   promptScrollTop = Math.max(0, Math.min(top, getMaxPromptScrollTop()));
   promptorStage.scrollTop = promptScrollTop;
+};
+
+const formatDuration = (totalSeconds: number) => {
+  const roundedSeconds = Math.max(0, Math.ceil(totalSeconds));
+  const minutes = Math.floor(roundedSeconds / 60);
+  const seconds = roundedSeconds % 60;
+  return `${minutes}分${String(seconds).padStart(2, '0')}秒`;
+};
+
+const renderEstimatedDuration = () => {
+  const measurement = promptorText.cloneNode(true) as HTMLElement;
+  measurement.removeAttribute('id');
+  measurement.classList.add('duration-measurement');
+  document.body.append(measurement);
+
+  const fullscreenScrollDistance = Math.max(0, measurement.scrollHeight - window.innerHeight);
+  measurement.remove();
+
+  const formattedDuration = formatDuration(fullscreenScrollDistance / settings.speed);
+  durationOutput.value = formattedDuration;
+  stageDurationOutput.value = formattedDuration;
+};
+
+const scheduleEstimatedDurationRender = () => {
+  if (durationRenderFrame !== null) {
+    cancelAnimationFrame(durationRenderFrame);
+  }
+
+  durationRenderFrame = requestAnimationFrame(() => {
+    durationRenderFrame = null;
+    renderEstimatedDuration();
+  });
 };
 
 const setActiveDocument = (id: string) => {
@@ -462,6 +506,7 @@ const renderPromptText = () => {
   promptorText.style.lineHeight = `${settings.lineHeight}`;
   promptorText.style.textAlign = settings.alignment;
   promptorText.style.transform = settings.mirror ? 'scaleX(-1)' : 'none';
+  scheduleEstimatedDurationRender();
 };
 
 const renderSettings = () => {
@@ -604,6 +649,7 @@ const updateSpeed = (value: string) => {
   settings.speed = Number(value);
   persistSettings();
   renderSettings();
+  scheduleEstimatedDurationRender();
 };
 
 const updateLineHeight = (value: string) => {
@@ -876,6 +922,12 @@ document.addEventListener('keydown', (event) => {
     resetButton.click();
   }
 });
+
+window.addEventListener('resize', scheduleEstimatedDurationRender);
+
+document.addEventListener('fullscreenchange', scheduleEstimatedDurationRender);
+
+void document.fonts.ready.then(scheduleEstimatedDurationRender);
 
 persistDocuments();
 persistSettings();

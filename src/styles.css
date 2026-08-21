@@ -268,6 +268,32 @@ textarea:focus,
   gap: 1rem;
 }
 
+.duration-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.3rem 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid rgb(88 166 255 / 22%);
+  border-radius: 0.9rem;
+  background: rgb(37 99 235 / 10%);
+  color: #c9d1d9;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.duration-summary output {
+  color: #ffffff;
+  font-size: 1.15rem;
+}
+
+.duration-summary small {
+  grid-column: 1 / -1;
+  color: #8ea2c6;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
 .toggle {
   display: flex;
   align-items: center;
@@ -351,6 +377,16 @@ textarea:focus,
   pointer-events: none;
 }
 
+.duration-measurement {
+  position: fixed;
+  top: 0;
+  left: -200vw;
+  width: 100vw;
+  height: auto;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .stage-controls {
   position: fixed;
   right: 50%;
@@ -388,6 +424,21 @@ textarea:focus,
   color: #dbeafe;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.stage-duration-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #bfdbfe;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.stage-duration-summary output {
+  color: #ffffff;
+  font-size: 1.05rem;
 }
 
 .promptor-fade {
