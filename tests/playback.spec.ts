@@ -205,7 +205,7 @@ test('editor toggles formatting off for the selected text', async ({ page }) => 
   }
 });
 
-test('rewind point control tag splits paragraphs without appearing in the prompt', async ({ page }) => {
+test('rewind point control tag preserves text flow and stays hidden in the prompt', async ({ page }) => {
   await page.goto('/');
 
   const editor = page.locator('#bodyInput');
@@ -228,10 +228,27 @@ test('rewind point control tag splits paragraphs without appearing in the prompt
   await page.locator('#rewindPointButton').click();
 
   await expect(editor.locator('[data-rewind-point="true"]')).toHaveText('↩ 巻き戻しポイント');
-  await expect(page.locator('#promptorText .promptor-paragraph')).toHaveCount(2);
+  await expect(page.locator('#promptorText .promptor-paragraph')).toHaveCount(1);
   await expect(page.locator('#promptorText .promptor-rewind-point')).toHaveCount(1);
   await expect(page.locator('#promptorText')).toHaveText('前半後半');
   await expect(page.locator('#promptorText')).not.toContainText('巻き戻しポイント');
+  const markerLayout = await page.locator('#promptorText .promptor-rewind-point').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      width: element.getBoundingClientRect().width,
+      marginLeft: style.marginLeft,
+      marginRight: style.marginRight,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
+    };
+  });
+  expect(markerLayout).toEqual({
+    width: 0,
+    marginLeft: '0px',
+    marginRight: '0px',
+    paddingLeft: '0px',
+    paddingRight: '0px',
+  });
 
   const savedBody = await page.evaluate(() => {
     const documents = JSON.parse(localStorage.getItem('open-standalone-web-promptor.documents.v1') ?? '[]') as Array<{
@@ -266,16 +283,16 @@ test('paragraph rewind stops at the previous control point instead of the beginn
     const prompt = element.querySelector('#promptorText');
     const rewindPoint = prompt?.querySelector('.promptor-rewind-point');
     const paragraphs = prompt?.querySelectorAll('.promptor-paragraph');
-    if (!rewindPoint || !paragraphs || paragraphs.length < 2) {
+    if (!rewindPoint || !paragraphs || paragraphs.length < 1) {
       throw new Error('Expected rewind targets were not rendered.');
     }
 
     const stageTop = element.getBoundingClientRect().top;
     const getTop = (target: Element) =>
       target.getBoundingClientRect().top - stageTop + element.scrollTop;
-    const lineHeight = Number.parseFloat(getComputedStyle(paragraphs[1]).lineHeight);
+    const lineHeight = Number.parseFloat(getComputedStyle(paragraphs[0]).lineHeight);
     const readingOffset = element.clientHeight / 3;
-    const initial = getTop(paragraphs[1]) - readingOffset + lineHeight * 2;
+    const initial = getTop(rewindPoint) - readingOffset + lineHeight * 2;
     const expected = Math.max(0, getTop(rewindPoint) - readingOffset);
     element.scrollTop = initial;
     element.dispatchEvent(new Event('scroll', { bubbles: true }));
