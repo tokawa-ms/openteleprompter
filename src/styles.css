@@ -161,7 +161,35 @@ textarea {
 .rich-editor {
   overflow: auto;
   resize: vertical;
+  font-weight: 400;
+  font-synthesis: style;
   white-space: pre-wrap;
+}
+
+.rich-editor b,
+.rich-editor strong,
+.promptor-text b,
+.promptor-text strong {
+  font-weight: 900;
+}
+
+.rich-editor i,
+.rich-editor em,
+.promptor-text i,
+.promptor-text em {
+  font-style: italic;
+}
+
+.rich-editor [data-rewind-point='true'] {
+  display: block;
+  margin: 0.75rem 0;
+  padding: 0.35rem 0.65rem;
+  border-block: 1px dashed rgb(88 166 255 / 55%);
+  color: #8ec5ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  user-select: none;
 }
 
 .rich-editor:empty::before {
@@ -285,11 +313,27 @@ textarea:focus,
   display: grid;
 }
 
+.promptor-stage:fullscreen .reading-guide {
+  display: block;
+}
+
+.reading-guide {
+  position: fixed;
+  top: 33.333vh;
+  right: 2vw;
+  left: 2vw;
+  z-index: 2;
+  display: none;
+  border-top: 2px dotted rgb(88 166 255 / 72%);
+  pointer-events: none;
+}
+
 .promptor-text {
   min-height: 160vh;
   padding: 42vh 7vw 56vh;
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 500;
+  font-synthesis: style;
   letter-spacing: 0.01em;
   line-break: strict;
   word-break: normal;
@@ -300,6 +344,11 @@ textarea:focus,
 
 .promptor-paragraph {
   margin: 0 0 1.15em;
+}
+
+.promptor-rewind-point {
+  height: 0;
+  pointer-events: none;
 }
 
 .stage-controls {
