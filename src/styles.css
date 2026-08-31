@@ -242,10 +242,49 @@ textarea {
   padding: 0.2rem;
 }
 
+.guide-color-fields,
+.guide-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.guide-color-fields {
+  justify-content: space-between;
+}
+
+.guide-preset-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 6%);
+  color: #c9d1d9;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.guide-preset-button[aria-pressed='true'] {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 0.15rem rgb(88 166 255 / 16%);
+}
+
+.guide-preset-button span {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-block: 2px dotted var(--preset-line);
+  border-radius: 0.2rem;
+  background: var(--preset-background);
+}
+
 input:focus,
 select:focus,
 textarea:focus,
-.rich-editor:focus {
+.rich-editor:focus,
+.guide-preset-button:focus-visible {
   border-color: #58a6ff;
   box-shadow: 0 0 0 0.2rem rgb(88 166 255 / 16%);
 }
@@ -369,8 +408,8 @@ textarea:focus,
   left: 2vw;
   z-index: 2;
   display: none;
-  border-top: 2px dotted rgb(88 166 255 / 72%);
-  background: rgb(88 166 255 / 8%);
+  border-block: 2px dotted #58a6ff;
+  background: #0b1f36;
   pointer-events: none;
 }
 
