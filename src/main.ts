@@ -20,11 +20,19 @@ type Settings = {
   alignment: Alignment;
   lineHeight: number;
   mirror: boolean;
+  guideLineColor: string;
+  guideBackgroundColor: string;
 };
 
 const READING_GUIDE_POSITION = 1 / 3;
 const EMPHASIS_FACTORS = ['1.2', '1.4', '1.8'] as const;
 type EmphasisFactor = (typeof EMPHASIS_FACTORS)[number];
+const GUIDE_COLOR_PRESETS = [
+  { name: 'ブルー', line: '#58a6ff', background: '#0b1f36' },
+  { name: 'アンバー', line: '#f2b84b', background: '#2b2110' },
+  { name: 'グリーン', line: '#52d273', background: '#102719' },
+  { name: 'ローズ', line: '#ff7aa2', background: '#2c1420' },
+] as const;
 const DOCUMENTS_KEY = 'open-standalone-web-promptor.documents.v1';
 const SETTINGS_KEY = 'open-standalone-web-promptor.settings.v1';
 
@@ -52,6 +60,8 @@ const defaultSettings: Settings = {
   alignment: 'center',
   lineHeight: 1.55,
   mirror: false,
+  guideLineColor: GUIDE_COLOR_PRESETS[0].line,
+  guideBackgroundColor: GUIDE_COLOR_PRESETS[0].background,
 };
 
 const safeParse = <T>(value: string | null): T | null => {
@@ -69,6 +79,12 @@ const safeParse = <T>(value: string | null): T | null => {
 
 let documents = safeParse<PromptDocument[]>(localStorage.getItem(DOCUMENTS_KEY)) ?? [defaultDocument];
 let settings = { ...defaultSettings, ...(safeParse<Partial<Settings>>(localStorage.getItem(SETTINGS_KEY)) ?? {}) };
+const normalizeHexColor = (value: string, fallback: string) => (/^#[\da-f]{6}$/i.test(value) ? value : fallback);
+settings.guideLineColor = normalizeHexColor(settings.guideLineColor, defaultSettings.guideLineColor);
+settings.guideBackgroundColor = normalizeHexColor(
+  settings.guideBackgroundColor,
+  defaultSettings.guideBackgroundColor,
+);
 
 if (documents.length === 0) {
   documents = [defaultDocument];
@@ -190,6 +206,36 @@ app.innerHTML = `
         </label>
       </section>
 
+      <section class="control-card">
+        <h2>視線ガイド</h2>
+        <div class="guide-color-fields">
+          <label class="color-field">
+            <span>点線</span>
+            <input id="guideLineColorInput" type="color" />
+          </label>
+          <label class="color-field">
+            <span>帯の背景</span>
+            <input id="guideBackgroundColorInput" type="color" />
+          </label>
+        </div>
+        <div class="guide-presets" aria-label="視線ガイドの配色">
+          ${GUIDE_COLOR_PRESETS.map(
+            (preset) => `
+              <button
+                class="guide-preset-button"
+                type="button"
+                data-line-color="${preset.line}"
+                data-background-color="${preset.background}"
+                aria-label="${preset.name}"
+              >
+                <span style="--preset-line: ${preset.line}; --preset-background: ${preset.background}"></span>
+                ${preset.name}
+              </button>
+            `,
+          ).join('')}
+        </div>
+      </section>
+
       <section class="control-card hint-card">
         <h2>ローカル保存</h2>
         <p>原稿と設定はこのブラウザーの localStorage に保存されます。サーバーには送信されません。</p>
@@ -243,6 +289,7 @@ const titleInput = getElement<HTMLInputElement>('titleInput');
 const bodyInput = getElement<HTMLDivElement>('bodyInput');
 const promptorStage = getElement<HTMLElement>('promptorStage');
 const promptorText = getElement<HTMLElement>('promptorText');
+const readingGuide = getElement<HTMLElement>('readingGuide');
 const boldButton = getElement<HTMLButtonElement>('boldButton');
 const italicButton = getElement<HTMLButtonElement>('italicButton');
 const underlineButton = getElement<HTMLButtonElement>('underlineButton');
@@ -268,6 +315,9 @@ const lineHeightInput = getElement<HTMLInputElement>('lineHeightInput');
 const stageLineHeightInput = getElement<HTMLInputElement>('stageLineHeightInput');
 const alignmentInput = getElement<HTMLSelectElement>('alignmentInput');
 const mirrorInput = getElement<HTMLInputElement>('mirrorInput');
+const guideLineColorInput = getElement<HTMLInputElement>('guideLineColorInput');
+const guideBackgroundColorInput = getElement<HTMLInputElement>('guideBackgroundColorInput');
+const guidePresetButtons = document.querySelectorAll<HTMLButtonElement>('.guide-preset-button');
 const fontSizeOutput = getElement<HTMLOutputElement>('fontSizeOutput');
 const stageFontSizeOutput = getElement<HTMLOutputElement>('stageFontSizeOutput');
 const speedOutput = getElement<HTMLOutputElement>('speedOutput');
@@ -546,6 +596,19 @@ const renderSettings = () => {
   stageLineHeightInput.value = String(settings.lineHeight);
   alignmentInput.value = settings.alignment;
   mirrorInput.checked = settings.mirror;
+  guideLineColorInput.value = settings.guideLineColor;
+  guideBackgroundColorInput.value = settings.guideBackgroundColor;
+  readingGuide.style.borderColor = settings.guideLineColor;
+  readingGuide.style.backgroundColor = settings.guideBackgroundColor;
+  guidePresetButtons.forEach((button) => {
+    button.setAttribute(
+      'aria-pressed',
+      String(
+        button.dataset.lineColor === settings.guideLineColor &&
+          button.dataset.backgroundColor === settings.guideBackgroundColor,
+      ),
+    );
+  });
 
   fontSizeOutput.value = `${settings.fontSize}px`;
   stageFontSizeOutput.value = `${settings.fontSize}px`;
@@ -687,6 +750,13 @@ const updateLineHeight = (value: string) => {
   settings.lineHeight = Number(value);
   persistSettings();
   renderPromptText();
+  renderSettings();
+};
+
+const updateGuideColors = (lineColor: string, backgroundColor: string) => {
+  settings.guideLineColor = normalizeHexColor(lineColor, settings.guideLineColor);
+  settings.guideBackgroundColor = normalizeHexColor(backgroundColor, settings.guideBackgroundColor);
+  persistSettings();
   renderSettings();
 };
 
@@ -1013,6 +1083,20 @@ mirrorInput.addEventListener('change', () => {
   settings.mirror = mirrorInput.checked;
   persistSettings();
   renderPromptText();
+});
+
+guideLineColorInput.addEventListener('input', () => {
+  updateGuideColors(guideLineColorInput.value, settings.guideBackgroundColor);
+});
+
+guideBackgroundColorInput.addEventListener('input', () => {
+  updateGuideColors(settings.guideLineColor, guideBackgroundColorInput.value);
+});
+
+guidePresetButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    updateGuideColors(button.dataset.lineColor ?? '', button.dataset.backgroundColor ?? '');
+  });
 });
 
 playButton.addEventListener('click', () => {
