@@ -23,6 +23,8 @@ type Settings = {
 };
 
 const READING_GUIDE_POSITION = 1 / 3;
+const EMPHASIS_FACTORS = ['1.2', '1.4', '1.8'] as const;
+type EmphasisFactor = (typeof EMPHASIS_FACTORS)[number];
 const DOCUMENTS_KEY = 'open-standalone-web-promptor.documents.v1';
 const SETTINGS_KEY = 'open-standalone-web-promptor.settings.v1';
 
@@ -122,6 +124,10 @@ app.innerHTML = `
             <button class="secondary-button format-button" id="boldButton" type="button">太字</button>
             <button class="secondary-button format-button" id="italicButton" type="button">斜体</button>
             <button class="secondary-button format-button" id="underlineButton" type="button">下線</button>
+            <span class="format-label">文字強調</span>
+            <button class="secondary-button format-button" id="emphasis12Button" type="button">1.2倍</button>
+            <button class="secondary-button format-button" id="emphasis14Button" type="button">1.4倍</button>
+            <button class="secondary-button format-button" id="emphasis18Button" type="button">1.8倍</button>
             <button class="secondary-button format-button" id="rewindPointButton" type="button">巻き戻しポイント</button>
             <label class="color-field">
               <span>色</span>
@@ -159,7 +165,7 @@ app.innerHTML = `
         <h2>表示</h2>
         <label class="field">
           <span>文字サイズ <output id="fontSizeOutput"></output></span>
-          <input id="fontSizeInput" type="range" min="24" max="96" step="2" />
+          <input id="fontSizeInput" type="range" min="24" max="150" step="2" />
         </label>
         <label class="field">
           <span>速度 <output id="speedOutput"></output></span>
@@ -203,7 +209,7 @@ app.innerHTML = `
         <div class="stage-range-grid">
           <label class="stage-field">
             <span>文字サイズ <output id="stageFontSizeOutput"></output></span>
-            <input id="stageFontSizeInput" type="range" min="24" max="96" step="2" />
+            <input id="stageFontSizeInput" type="range" min="24" max="150" step="2" />
           </label>
           <label class="stage-field">
             <span>速度 <output id="stageSpeedOutput"></output></span>
@@ -239,6 +245,9 @@ const promptorText = getElement<HTMLElement>('promptorText');
 const boldButton = getElement<HTMLButtonElement>('boldButton');
 const italicButton = getElement<HTMLButtonElement>('italicButton');
 const underlineButton = getElement<HTMLButtonElement>('underlineButton');
+const emphasis12Button = getElement<HTMLButtonElement>('emphasis12Button');
+const emphasis14Button = getElement<HTMLButtonElement>('emphasis14Button');
+const emphasis18Button = getElement<HTMLButtonElement>('emphasis18Button');
 const rewindPointButton = getElement<HTMLButtonElement>('rewindPointButton');
 const textColorInput = getElement<HTMLInputElement>('textColorInput');
 const playButton = getElement<HTMLButtonElement>('playButton');
@@ -335,6 +344,10 @@ const sanitizeHtml = (value: string) => {
         const sanitizedColor = sanitizeColor(sourceElement.style.color);
         if (sanitizedColor) {
           targetElement.style.color = sanitizedColor;
+        }
+        const emphasis = sourceElement.dataset.emphasis;
+        if (EMPHASIS_FACTORS.some((factor) => factor === emphasis)) {
+          targetElement.dataset.emphasis = emphasis;
         }
       }
     }
@@ -737,6 +750,30 @@ const applyEditorCommand = (command: 'bold' | 'italic' | 'underline' | 'foreColo
   saveEditorBody();
 };
 
+const applyEmphasis = (factor: EmphasisFactor) => {
+  restoreEditorSelection();
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  if (range.collapsed || !bodyInput.contains(range.commonAncestorContainer)) {
+    return;
+  }
+
+  const emphasis = document.createElement('span');
+  emphasis.dataset.emphasis = factor;
+  emphasis.append(range.extractContents());
+  range.insertNode(emphasis);
+  range.selectNodeContents(emphasis);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  bodyInput.focus();
+  saveEditorBody();
+};
+
 const insertRewindPoint = () => {
   restoreEditorSelection();
   const selection = document.getSelection();
@@ -796,6 +833,12 @@ italicButton.addEventListener('mousedown', (event) => event.preventDefault());
 
 underlineButton.addEventListener('mousedown', (event) => event.preventDefault());
 
+emphasis12Button.addEventListener('mousedown', (event) => event.preventDefault());
+
+emphasis14Button.addEventListener('mousedown', (event) => event.preventDefault());
+
+emphasis18Button.addEventListener('mousedown', (event) => event.preventDefault());
+
 rewindPointButton.addEventListener('mousedown', (event) => event.preventDefault());
 
 boldButton.addEventListener('click', () => applyEditorCommand('bold'));
@@ -803,6 +846,12 @@ boldButton.addEventListener('click', () => applyEditorCommand('bold'));
 italicButton.addEventListener('click', () => applyEditorCommand('italic'));
 
 underlineButton.addEventListener('click', () => applyEditorCommand('underline'));
+
+emphasis12Button.addEventListener('click', () => applyEmphasis('1.2'));
+
+emphasis14Button.addEventListener('click', () => applyEmphasis('1.4'));
+
+emphasis18Button.addEventListener('click', () => applyEmphasis('1.8'));
 
 rewindPointButton.addEventListener('click', insertRewindPoint);
 

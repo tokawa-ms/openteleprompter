@@ -209,6 +209,24 @@ textarea {
   padding: 0 0.85rem;
 }
 
+.format-label {
+  color: #c9d1d9;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+[data-emphasis='1.2'] {
+  font-size: 1.2em;
+}
+
+[data-emphasis='1.4'] {
+  font-size: 1.4em;
+}
+
+[data-emphasis='1.8'] {
+  font-size: 1.8em;
+}
+
 .color-field {
   display: flex;
   align-items: center;
