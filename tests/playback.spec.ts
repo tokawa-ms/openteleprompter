@@ -203,6 +203,65 @@ test('editor applies rich text formatting to teleprompter text', async ({ page }
   expect(savedBody).toContain('color: rgb(255, 204, 0)');
 });
 
+test('font size controls support up to 150px', async ({ page }) => {
+  await page.goto('/');
+
+  const fontSizeInput = page.locator('#fontSizeInput');
+  const stageFontSizeInput = page.locator('#stageFontSizeInput');
+  await expect(fontSizeInput).toHaveAttribute('max', '150');
+  await expect(stageFontSizeInput).toHaveAttribute('max', '150');
+
+  await setRangeValue(fontSizeInput, '150');
+  await expect(stageFontSizeInput).toHaveValue('150');
+  await expect(page.locator('#fontSizeOutput')).toHaveText('150px');
+  await expect(page.locator('#promptorText')).toHaveCSS('font-size', '150px');
+});
+
+test('editor emphasizes only selected text at each supported multiplier', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  for (const [factor, buttonId] of [
+    ['1.2', 'emphasis12Button'],
+    ['1.4', 'emphasis14Button'],
+    ['1.8', 'emphasis18Button'],
+  ] as const) {
+    await editor.fill('前強調後');
+    await editor.evaluate((element) => {
+      const text = element.firstChild;
+      if (!text) {
+        throw new Error('Editor text node was not found.');
+      }
+      const range = document.createRange();
+      range.setStart(text, 1);
+      range.setEnd(text, 3);
+      const selection = document.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      element.dispatchEvent(new Event('mouseup', { bubbles: true }));
+    });
+
+    await page.locator(`#${buttonId}`).click();
+
+    const emphasized = page.locator(`#promptorText [data-emphasis="${factor}"]`);
+    await expect(emphasized).toHaveText('強調');
+    const actualMultiplier = await emphasized.evaluate((element) => {
+      const parentSize = Number.parseFloat(getComputedStyle(element.parentElement!).fontSize);
+      return Number.parseFloat(getComputedStyle(element).fontSize) / parentSize;
+    });
+    expect(actualMultiplier).toBeCloseTo(Number(factor), 2);
+    await expect(page.locator('#promptorText')).toHaveText('前強調後');
+  }
+
+  const savedBody = await page.evaluate(() => {
+    const documents = JSON.parse(localStorage.getItem('open-standalone-web-promptor.documents.v1') ?? '[]') as Array<{
+      body: string;
+    }>;
+    return documents[0]?.body ?? '';
+  });
+  expect(savedBody).toContain('data-emphasis="1.8"');
+});
+
 test('editor toggles formatting off for the selected text', async ({ page }) => {
   await page.goto('/');
 
