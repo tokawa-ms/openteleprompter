@@ -406,7 +406,7 @@ textarea:focus,
   right: 2vw;
   bottom: 50vh;
   left: 2vw;
-  z-index: 2;
+  z-index: 1;
   display: none;
   border-block: 2px dotted #58a6ff;
   background: #0b1f36;
@@ -414,6 +414,8 @@ textarea:focus,
 }
 
 .promptor-text {
+  position: relative;
+  z-index: 2;
   min-height: 160vh;
   padding: 42vh 7vw 56vh;
   color: #ffffff;
@@ -454,7 +456,7 @@ textarea:focus,
   position: fixed;
   right: 50%;
   bottom: 1.25rem;
-  z-index: 3;
+  z-index: 4;
   display: none;
   width: min(64rem, calc(100vw - 2rem));
   padding: 0.9rem;
@@ -506,7 +508,7 @@ textarea:focus,
 
 .promptor-fade {
   position: sticky;
-  z-index: 1;
+  z-index: 3;
   left: 0;
   width: 100%;
   height: 16vh;

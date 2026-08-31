@@ -125,6 +125,16 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
     backgroundColor: 'rgb(11, 31, 54)',
     pointerEvents: 'none',
   });
+  const stackingOrder = await page.evaluate(() => {
+    const zIndexOf = (id: string) => Number.parseInt(getComputedStyle(document.querySelector(`#${id}`)!).zIndex, 10);
+    return {
+      guide: zIndexOf('readingGuide'),
+      text: zIndexOf('promptorText'),
+      controls: Number.parseInt(getComputedStyle(document.querySelector('.stage-controls')!).zIndex, 10),
+    };
+  });
+  expect(stackingOrder.guide).toBeLessThan(stackingOrder.text);
+  expect(stackingOrder.text).toBeLessThan(stackingOrder.controls);
 
   await expect
     .poll(async () => stage.evaluate((element) => element.scrollTop), {
