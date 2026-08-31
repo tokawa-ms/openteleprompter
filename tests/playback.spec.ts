@@ -105,10 +105,22 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
   await expect(page.locator('#stageSpeedInput')).toBeVisible();
   await expect(page.locator('#stageLineHeightInput')).toBeVisible();
   await expect(readingGuide).toBeVisible();
-  const readingGuidePosition = await readingGuide.evaluate(
-    (element) => element.getBoundingClientRect().top / window.innerHeight,
-  );
-  expect(readingGuidePosition).toBeCloseTo(1 / 3, 2);
+  const readingGuideLayout = await readingGuide.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      top: bounds.top / window.innerHeight,
+      bottom: bounds.bottom / window.innerHeight,
+      backgroundColor: style.backgroundColor,
+      pointerEvents: style.pointerEvents,
+    };
+  });
+  expect(readingGuideLayout).toEqual({
+    top: expect.closeTo(1 / 3, 2),
+    bottom: expect.closeTo(1 / 2, 2),
+    backgroundColor: 'rgba(88, 166, 255, 0.08)',
+    pointerEvents: 'none',
+  });
 
   await expect
     .poll(async () => stage.evaluate((element) => element.scrollTop), {
