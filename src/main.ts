@@ -128,6 +128,7 @@ app.innerHTML = `
             <button class="secondary-button format-button" id="emphasis12Button" type="button">1.2倍</button>
             <button class="secondary-button format-button" id="emphasis14Button" type="button">1.4倍</button>
             <button class="secondary-button format-button" id="emphasis18Button" type="button">1.8倍</button>
+            <button class="secondary-button format-button" id="clearFormattingButton" type="button">選択範囲の装飾解除</button>
             <button class="secondary-button format-button" id="rewindPointButton" type="button">巻き戻しポイント</button>
             <label class="color-field">
               <span>色</span>
@@ -248,6 +249,7 @@ const underlineButton = getElement<HTMLButtonElement>('underlineButton');
 const emphasis12Button = getElement<HTMLButtonElement>('emphasis12Button');
 const emphasis14Button = getElement<HTMLButtonElement>('emphasis14Button');
 const emphasis18Button = getElement<HTMLButtonElement>('emphasis18Button');
+const clearFormattingButton = getElement<HTMLButtonElement>('clearFormattingButton');
 const rewindPointButton = getElement<HTMLButtonElement>('rewindPointButton');
 const textColorInput = getElement<HTMLInputElement>('textColorInput');
 const playButton = getElement<HTMLButtonElement>('playButton');
@@ -762,13 +764,99 @@ const applyEmphasis = (factor: EmphasisFactor) => {
     return;
   }
 
+  const commonElement =
+    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.commonAncestorContainer as Element)
+      : range.commonAncestorContainer.parentElement;
+  const currentEmphasis = commonElement?.closest<HTMLElement>('[data-emphasis]');
+  if (currentEmphasis && bodyInput.contains(currentEmphasis)) {
+    const emphasisRange = document.createRange();
+    emphasisRange.selectNodeContents(currentEmphasis);
+    if (
+      range.compareBoundaryPoints(Range.START_TO_START, emphasisRange) === 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, emphasisRange) === 0
+    ) {
+      currentEmphasis.dataset.emphasis = factor;
+      bodyInput.focus();
+      saveEditorBody();
+      return;
+    }
+  }
+
   const emphasis = document.createElement('span');
   emphasis.dataset.emphasis = factor;
-  emphasis.append(range.extractContents());
+  const contents = range.extractContents();
+  contents.querySelectorAll<HTMLElement>('[data-emphasis]').forEach((element) => {
+    delete element.dataset.emphasis;
+  });
+  emphasis.append(contents);
   range.insertNode(emphasis);
   range.selectNodeContents(emphasis);
   selection.removeAllRanges();
   selection.addRange(range);
+
+  bodyInput.focus();
+  saveEditorBody();
+};
+
+const clearFormatting = () => {
+  restoreEditorSelection();
+  const selection = document.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  if (range.collapsed || !bodyInput.contains(range.commonAncestorContainer)) {
+    return;
+  }
+
+  const formattingTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'FONT', 'SPAN']);
+  const contents = range.extractContents();
+  Array.from(contents.querySelectorAll<HTMLElement>('b, strong, i, em, u, font, span'))
+    .reverse()
+    .forEach((element) => {
+      if (element.dataset.rewindPoint !== 'true') {
+        element.replaceWith(...element.childNodes);
+      }
+    });
+
+  const marker = document.createElement('span');
+  marker.append(contents);
+  range.insertNode(marker);
+
+  while (
+    marker.parentElement &&
+    marker.parentElement !== bodyInput &&
+    formattingTags.has(marker.parentElement.tagName) &&
+    marker.parentElement.dataset.rewindPoint !== 'true'
+  ) {
+    const parent = marker.parentElement;
+    const trailingParent = parent.cloneNode(false) as HTMLElement;
+    while (marker.nextSibling) {
+      trailingParent.append(marker.nextSibling);
+    }
+    parent.after(marker);
+    if (trailingParent.hasChildNodes()) {
+      marker.after(trailingParent);
+    }
+    if (!parent.hasChildNodes()) {
+      parent.remove();
+    }
+  }
+
+  const clearedNodes = Array.from(marker.childNodes);
+  marker.replaceWith(...clearedNodes);
+  const clearedRange = document.createRange();
+  clearedRange.setStartBefore(clearedNodes[0]);
+  clearedRange.setEndAfter(clearedNodes[clearedNodes.length - 1]);
+  selection.removeAllRanges();
+  selection.addRange(clearedRange);
+  bodyInput.querySelectorAll<HTMLElement>('b, strong, i, em, u, font, span').forEach((element) => {
+    if (!element.textContent && !element.querySelector('[data-rewind-point="true"]')) {
+      element.remove();
+    }
+  });
 
   bodyInput.focus();
   saveEditorBody();
@@ -839,6 +927,8 @@ emphasis14Button.addEventListener('mousedown', (event) => event.preventDefault()
 
 emphasis18Button.addEventListener('mousedown', (event) => event.preventDefault());
 
+clearFormattingButton.addEventListener('mousedown', (event) => event.preventDefault());
+
 rewindPointButton.addEventListener('mousedown', (event) => event.preventDefault());
 
 boldButton.addEventListener('click', () => applyEditorCommand('bold'));
@@ -852,6 +942,8 @@ emphasis12Button.addEventListener('click', () => applyEmphasis('1.2'));
 emphasis14Button.addEventListener('click', () => applyEmphasis('1.4'));
 
 emphasis18Button.addEventListener('click', () => applyEmphasis('1.8'));
+
+clearFormattingButton.addEventListener('click', clearFormatting);
 
 rewindPointButton.addEventListener('click', insertRewindPoint);
 
