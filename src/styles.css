@@ -365,10 +365,12 @@ textarea:focus,
   position: fixed;
   top: 33.333vh;
   right: 2vw;
+  bottom: 50vh;
   left: 2vw;
   z-index: 2;
   display: none;
   border-top: 2px dotted rgb(88 166 255 / 72%);
+  background: rgb(88 166 255 / 8%);
   pointer-events: none;
 }
 
