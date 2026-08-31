@@ -81,7 +81,7 @@
 
 | キー | 動作 |
 | --- | --- |
-| `Ctrl+Enter`（macOS では `Command+Enter`） | 再生と停止を切り替えます |
+| `Ctrl+Space`（macOS では `Command+Space`） | 再生と停止を切り替えます |
 | `Home` | 再生を停止して先頭へ戻ります |
 
 ## 保存場所と注意事項

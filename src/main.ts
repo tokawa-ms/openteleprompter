@@ -978,7 +978,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+  if (event.code === 'Space' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     playButton.click();
   }

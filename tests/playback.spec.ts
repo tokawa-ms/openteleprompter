@@ -39,21 +39,33 @@ test('estimated duration updates with speed and appears in fullscreen controls',
   await expect(stageDurationOutput).toHaveText((await durationOutput.textContent()) ?? '');
 });
 
-test('space edits the script and Ctrl+Enter starts fullscreen playback', async ({ page }) => {
+test('Ctrl+Enter remains available and Ctrl+Space starts fullscreen playback', async ({ page }) => {
   await page.goto('/');
 
   const editor = page.locator('#bodyInput');
   await editor.fill('本文');
   await editor.click();
   await page.keyboard.press('End');
-  await page.keyboard.press('Space');
+  const ctrlEnterWasPrevented = page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        document.addEventListener(
+          'keydown',
+          (event) => {
+            resolve(event.defaultPrevented);
+          },
+          { once: true },
+        );
+      }),
+  );
+  await page.keyboard.press('Control+Enter');
 
-  await expect.poll(async () => (await editor.textContent()) ?? '').toMatch(/^本文\s$/);
+  await expect(ctrlEnterWasPrevented).resolves.toBe(false);
   await expect
     .poll(async () => page.evaluate(() => document.fullscreenElement?.id ?? null))
     .toBeNull();
 
-  await page.keyboard.press('Control+Enter');
+  await page.keyboard.press('Control+Space');
   await expect
     .poll(async () => page.evaluate(() => document.fullscreenElement?.id ?? null))
     .toBe('promptorStage');
