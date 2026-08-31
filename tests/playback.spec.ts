@@ -111,6 +111,8 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
     return {
       top: bounds.top / window.innerHeight,
       bottom: bounds.bottom / window.innerHeight,
+      borderTopColor: style.borderTopColor,
+      borderBottomColor: style.borderBottomColor,
       backgroundColor: style.backgroundColor,
       pointerEvents: style.pointerEvents,
     };
@@ -118,7 +120,9 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
   expect(readingGuideLayout).toEqual({
     top: expect.closeTo(1 / 3, 2),
     bottom: expect.closeTo(1 / 2, 2),
-    backgroundColor: 'rgba(88, 166, 255, 0.08)',
+    borderTopColor: 'rgb(88, 166, 255)',
+    borderBottomColor: 'rgb(88, 166, 255)',
+    backgroundColor: 'rgb(11, 31, 54)',
     pointerEvents: 'none',
   });
 
@@ -170,6 +174,32 @@ test('play button scrolls the teleprompter stage', async ({ page }) => {
   await setRangeValue(page.locator('#stageLineHeightInput'), '1.8');
   await expect(page.locator('#lineHeightInput')).toHaveValue('1.8');
   await expect(page.locator('#stageLineHeightOutput')).toHaveText('1.80');
+});
+
+test('gaze guide colors can be customized, selected from presets, and persist', async ({ page }) => {
+  await page.goto('/');
+
+  const lineColorInput = page.locator('#guideLineColorInput');
+  const backgroundColorInput = page.locator('#guideBackgroundColorInput');
+  const greenPreset = page.getByRole('button', { name: 'グリーン' });
+
+  await greenPreset.click();
+  await expect(lineColorInput).toHaveValue('#52d273');
+  await expect(backgroundColorInput).toHaveValue('#102719');
+  await expect(greenPreset).toHaveAttribute('aria-pressed', 'true');
+
+  await setRangeValue(lineColorInput, '#ffcc00');
+  await setRangeValue(backgroundColorInput, '#241b00');
+  await expect(greenPreset).toHaveAttribute('aria-pressed', 'false');
+
+  await page.reload();
+  await expect(lineColorInput).toHaveValue('#ffcc00');
+  await expect(backgroundColorInput).toHaveValue('#241b00');
+
+  await page.locator('#fullscreenButton').click();
+  await expect(page.locator('#readingGuide')).toHaveCSS('border-top-color', 'rgb(255, 204, 0)');
+  await expect(page.locator('#readingGuide')).toHaveCSS('border-bottom-color', 'rgb(255, 204, 0)');
+  await expect(page.locator('#readingGuide')).toHaveCSS('background-color', 'rgb(36, 27, 0)');
 });
 
 test('teleprompter text uses Japanese line-breaking rules', async ({ page }) => {
