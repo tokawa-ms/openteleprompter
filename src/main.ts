@@ -929,7 +929,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (event.code === 'Space') {
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     playButton.click();
   }
