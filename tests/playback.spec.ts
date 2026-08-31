@@ -274,6 +274,75 @@ test('editor emphasizes only selected text at each supported multiplier', async 
   expect(savedBody).toContain('data-emphasis="1.8"');
 });
 
+test('editor emphasis does not compound when reapplied to the same selection', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  await editor.fill('強調テスト');
+  await editor.focus();
+  await page.keyboard.press('Control+A');
+
+  await page.locator('#emphasis12Button').click();
+  await page.locator('#emphasis12Button').click();
+  await page.locator('#emphasis18Button').click();
+
+  const emphasized = page.locator('#promptorText [data-emphasis]');
+  await expect(emphasized).toHaveCount(1);
+  await expect(emphasized).toHaveAttribute('data-emphasis', '1.8');
+  const actualMultiplier = await emphasized.evaluate((element) => {
+    const parentSize = Number.parseFloat(getComputedStyle(element.parentElement!).fontSize);
+    return Number.parseFloat(getComputedStyle(element).fontSize) / parentSize;
+  });
+  expect(actualMultiplier).toBeCloseTo(1.8, 2);
+});
+
+test('editor clears all formatting from the selected text', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#bodyInput');
+  await editor.fill('前解除後');
+  await editor.focus();
+  await page.keyboard.press('Control+A');
+  await page.locator('#boldButton').click();
+  await page.locator('#italicButton').click();
+  await page.locator('#underlineButton').click();
+  await setRangeValue(page.locator('#textColorInput'), '#ffcc00');
+  await page.locator('#emphasis14Button').click();
+
+  await editor.evaluate((element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let text = walker.nextNode();
+    while (text && !text.textContent?.includes('前解除後')) {
+      text = walker.nextNode();
+    }
+    if (!text) {
+      throw new Error('Editor text node was not found.');
+    }
+    const range = document.createRange();
+    range.setStart(text, 1);
+    range.setEnd(text, 3);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    element.dispatchEvent(new Event('mouseup', { bubbles: true }));
+  });
+  await page.locator('#clearFormattingButton').click();
+
+  await expect(editor).toHaveText('前解除後');
+  await expect(editor.locator('b')).toHaveCount(2);
+  const clearedTextIsFormatted = await editor.evaluate((element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && node.textContent !== '解除') {
+      node = walker.nextNode();
+    }
+    return node?.parentElement?.closest('b, strong, i, em, u, font, span') !== null;
+  });
+  expect(clearedTextIsFormatted).toBe(false);
+  await expect(page.locator('#promptorText')).toHaveText('前解除後');
+  await expect(page.locator('#promptorText').locator('b')).toHaveCount(2);
+});
+
 test('editor toggles formatting off for the selected text', async ({ page }) => {
   await page.goto('/');
 
