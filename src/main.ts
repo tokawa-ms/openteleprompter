@@ -825,6 +825,7 @@ const clearFormatting = () => {
   marker.append(contents);
   range.insertNode(marker);
 
+  const splitParents: HTMLElement[] = [];
   while (
     marker.parentElement &&
     marker.parentElement !== bodyInput &&
@@ -833,6 +834,7 @@ const clearFormatting = () => {
   ) {
     const parent = marker.parentElement;
     const trailingParent = parent.cloneNode(false) as HTMLElement;
+    splitParents.push(parent, trailingParent);
     while (marker.nextSibling) {
       trailingParent.append(marker.nextSibling);
     }
@@ -852,7 +854,7 @@ const clearFormatting = () => {
   clearedRange.setEndAfter(clearedNodes[clearedNodes.length - 1]);
   selection.removeAllRanges();
   selection.addRange(clearedRange);
-  bodyInput.querySelectorAll<HTMLElement>('b, strong, i, em, u, font, span').forEach((element) => {
+  splitParents.forEach((element) => {
     if (!element.textContent && !element.querySelector('[data-rewind-point="true"]')) {
       element.remove();
     }
