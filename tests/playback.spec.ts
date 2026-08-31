@@ -46,7 +46,10 @@ test('space edits the script and Ctrl+Enter starts fullscreen playback', async (
   await editor.fill('本文');
   await editor.click();
   await page.keyboard.press('End');
+  await page.keyboard.press('Space');
+
   await expect.poll(async () => (await editor.textContent()) ?? '').toMatch(/^本文\s$/);
+  await expect
     .poll(async () => page.evaluate(() => document.fullscreenElement?.id ?? null))
     .toBeNull();
 
