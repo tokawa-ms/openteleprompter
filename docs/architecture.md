@@ -79,7 +79,7 @@ JSON の解析に失敗した場合は該当データを初期値へ戻します
 
 許可する属性:
 
-- 通常の `span` は妥当な `style.color` だけを保持
+- 通常の `span` は妥当な `style.color` と、値が `1.2`、`1.4`、`1.8` のいずれかである `data-emphasis` を保持
 - 制御タグは `data-rewind-point="true"` と `contenteditable="false"` を再生成
 
 その他の要素、属性、イベントハンドラーは破棄し、子の安全な内容だけを残します。
